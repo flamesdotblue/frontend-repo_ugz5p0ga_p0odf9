@@ -1,5 +1,5 @@
 import React from 'react';
-import { Clock, CheckCircle2, Vote, ChevronRight } from 'lucide-react';
+import { Clock, CheckCircle2, Vote, ChevronRight, Lock } from 'lucide-react';
 
 function statusOf(election) {
   const now = Date.now();
@@ -10,7 +10,7 @@ function statusOf(election) {
   return { label: 'Active', color: 'bg-emerald-100 text-emerald-700' };
 }
 
-const ElectionList = ({ elections, onVote, onSelect }) => {
+const ElectionList = ({ elections, onVote, onSelect, canVote, hasVoted }) => {
   if (!elections.length) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-slate-600">
@@ -24,6 +24,8 @@ const ElectionList = ({ elections, onVote, onSelect }) => {
       {elections.map((el) => {
         const st = statusOf(el);
         const totalVotes = el.candidates.reduce((a, c) => a + (c.votes || 0), 0);
+        const voted = hasVoted ? hasVoted(el.id) : false;
+        const allowed = canVote ? canVote(el.id) : true;
         return (
           <div key={el.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -50,22 +52,26 @@ const ElectionList = ({ elections, onVote, onSelect }) => {
             </div>
 
             <div className="mt-4 grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {el.candidates.map((c) => (
-                <div key={c.id} className="border rounded-xl p-3 flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{c.name}</p>
-                    <p className="text-xs text-slate-500">Votes: {c.votes || 0}</p>
+              {el.candidates.map((c) => {
+                const disabled = st.label !== 'Active' || voted || !allowed;
+                const titleMsg = st.label !== 'Active' ? 'Voting disabled' : voted ? 'You already voted in this election' : !allowed ? 'Login to vote' : 'Vote';
+                return (
+                  <div key={c.id} className="border rounded-xl p-3 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">{c.name}</p>
+                      <p className="text-xs text-slate-500">Votes: {c.votes || 0}</p>
+                    </div>
+                    <button
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50"
+                      onClick={() => onVote?.(el.id, c.id)}
+                      disabled={disabled}
+                      title={titleMsg}
+                    >
+                      {(!allowed || voted) ? <Lock className="h-4 w-4" /> : <Vote className="h-4 w-4" />} Vote
+                    </button>
                   </div>
-                  <button
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700 disabled:opacity-50"
-                    onClick={() => onVote?.(el.id, c.id)}
-                    disabled={statusOf(el).label !== 'Active'}
-                    title={statusOf(el).label !== 'Active' ? 'Voting disabled' : 'Vote'}
-                  >
-                    <Vote className="h-4 w-4" /> Vote
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
